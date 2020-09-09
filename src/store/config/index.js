@@ -245,6 +245,14 @@ export default {
 
         commit('alert/UPDATE_GITTER_MSG_LEVEL', config.gitter_msg_level);
 
+        if (config.start_time && config.end_time && config.drop_if) {
+          commit('alert/UPDATE_USE_TIME_WINDOW', true);
+          commit('alert/UPDATE_TIME_WINDOW_START_TIME', config.start_time);
+          commit('alert/UPDATE_TIME_WINDOW_END_TIME', config.end_time);
+          commit('alert/UPDATE_TIME_WINDOW_DROP_IF', config.drop_if);
+        } else {
+          commit('alert/UPDATE_USE_TIME_WINDOW', false);
+        }
         commit('alert/UPDATE_JIRA_PROJECT', config.jira_project);
         commit('alert/UPDATE_JIRA_ISSUE_TYPE', config.jira_issuetype);
         commit('alert/UPDATE_JIRA_COMPONENTS', config.jira_components);
@@ -865,6 +873,19 @@ export default {
       return config;
     },
 
+    timeWindow(state) {
+      let config = {};
+
+      if (state.alert.useTimeWindow) {
+        config.start_time = state.alert.timeWindowStartTime;
+        config.end_time = state.alert.timeWindowEndTime;
+        config.drop_if = state.alert.timeWindowDropIf;
+        config.match_enhancements = ['elastalert_modules.hour_range_enhancement.HourRangeEnhancement'];
+      }
+
+      return config;
+    },
+
     jira(state) {
       let config = {};
 
@@ -1001,7 +1022,14 @@ export default {
         config.realert = state.alert.realert;
       }
 
-      config = { ...config, ...getters.aggregation };
+      const existingMatchEnhancements = config.match_enhancements ?? [];
+      const timeWindowMatchEnhancements = getters.timeWindow.match_enhancements ?? [];
+      config = {
+        ...config,
+        ...getters.aggregation,
+        ...getters.timeWindow,
+        match_enhancements: [...existingMatchEnhancements, ...timeWindowMatchEnhancements]
+      };
 
       if (state.alert.alert.includes('post')) {
         config = { ...config, ...getters.http };
